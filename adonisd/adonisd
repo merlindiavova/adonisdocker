@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+
+UNAMEOUT="$(uname -s)"
+case "${UNAMEOUT}" in
+    Linux*)             MACHINE=linux;;
+    Darwin*)            MACHINE=mac;;
+    MINGW64_NT-10.0*)   MACHINE=mingw64;;
+    *)                  MACHINE="UNKNOWN"
+esac
+
+if [ "$MACHINE" == "UNKNOWN" ]; then
+    echo "Unsupported system type"
+    echo "System must be a Macintosh, Linux or Windows"
+    echo ""
+    echo "System detection determined via uname command"
+    echo "If the following is empty, could not find uname command: $(which uname)"
+    echo "Your reported uname is: $(uname -s)"
+fi
+
+# Set environment variables for dev
+if [ "$MACHINE" == "linux" ]; then
+    SEDCMD="sed -i"
+elif [ "$MACHINE" == "mac" ]; then
+    SEDCMD="sed -i .bak"
+elif [ "$MACHINE" == "mingw64" ]; then # Git Bash
+    SEDCMD="sed -i"
+fi
+
+export APP_PORT=${APP_PORT:-80}
+export DB_PORT=${DB_PORT:-3306}
+export WWWUSER=${WWWUSER:-$UID}
+
+# Is the environment running
+PSRESULT="$(docker-compose ps -q)"
+if [ ! -z "$PSRESULT" ]; then
+    EXEC="yes"
+else
+    EXEC="no"
+fi
+
+# Create base docker-compose command to run
+COMPOSE="docker-compose -f docker-compose.yml"
+
+# If we pass any arguments...
+if [ $# -gt 0 ]; then
+
+    # Source .env, which can over-ride env vars
+    # such as APP_PORT, DB_PORT, and WWWUSER
+    if [ -f .env ]; then
+        source .env
+    fi
+
+    # Edit .env file to set correct hostnames for mariadb
+    if [ "$1" == "init" ]; then
+        cp .env .env.bak.adonisd
+        echo "ADONIS DOCK: Initializing Adonis Dock..."
+
+        if [ ! -f adonisd ]; then
+            echo "No adonisd file found within current working directory $(pwd)"
+            exit 0
+        fi
+
+        echo "ADONIS DOCK: Adding docker image compatible env variables"
+        $SEDCMD "s/HOST=.*/HOST=0.0.0.0/g" .env
+        $SEDCMD "s/PORT=.*/PORT=8080/g" .env
+        $SEDCMD "s/APP_PORT=.*/APP_PORT=80/g" .env
+        $SEDCMD "s/DB_PORT=.*/DB_PORT=3306/g" .env
+        $SEDCMD "s/DB_HOST=.*/DB_HOST=mysql/g" .env
+
+        echo "ADONIS DOCK: Making adonisd command available"
+        chmod +x adonisd
+
+        echo ""
+        echo "ADONIS DOCK: Complete!"
+        echo "ADONIS DOCK: You can now use Adonis Dock"
+        echo "ADONIS DOCK: Try starting it:"
+        echo "./adonisd start"
+
+
+    # Start up containers
+    elif [ "$1" == "start" ]; then
+        $COMPOSE up -d
+
+    # Stop the containers
+    elif [ "$1" == "stop" ]; then
+        $COMPOSE down
+
+    # If "adonis" is used, run adonis
+    # from our app container
+    elif [ "$1" == "adonis" ] || [ "$1" == "ajs" ]; then
+        shift 1
+        $COMPOSE run --rm \
+            app \
+            adonis "$@"
+    
+    # If "npm" is used, run npm
+    # from our node container
+    elif [ "$1" == "npm" ]; then
+        shift 1
+        $COMPOSE run --rm \
+            app \
+            npm "$@"
+
+    # If "yarn" is used, run yarn
+    # from our node container
+    elif [ "$1" == "yarn" ]; then
+        shift 1
+        $COMPOSE run --rm \
+            app \
+            yarn "$@"
+
+    # If "mysql" is used, run mysql
+    # from our mysql container
+    elif [ "$1" == "mysql" ]; then
+        shift 1
+        if [ "$EXEC" == "yes" ]; then
+            $COMPOSE exec \
+                mariadb \
+                mysql -u root -p$DB_PASSWORD $DB_DATABASE
+        else
+            $COMPOSE run --rm \
+                mariadb \
+                mysql -u root -p$DB_PASSWORD $DB_DATABASE
+        fi
+        
+    # If "dump" is used, run mysqldump
+    # from our mysql container
+    elif [ "$1" == "dump" ]; then
+        shift 1
+        if [ "$EXEC" == "yes" ]; then
+            $COMPOSE exec \
+                mariadb \
+                bash -c 'MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysqldump -u root --default-character-set=utf8mb4 $MYSQL_DATABASE'
+        else
+            $COMPOSE run --rm \
+                mariadb \
+                bash -c 'MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysqldump -u root --default-character-set=utf8mb4 $MYSQL_DATABASE'
+        fi
+
+    # Else, pass-thru args to docker-compose
+    else
+        $COMPOSE "$@"
+    fi
+else
+    # Use the docker-compose ps command if nothing else passed through
+    $COMPOSE ps
+fi

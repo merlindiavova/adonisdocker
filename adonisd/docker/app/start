@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+if [ $# -gt 0 ];then
+    # If we passed a command, run it as current user
+    exec gosu $WWWUSER "$@"
+    
+# $ENV is set the .env file and the variable is available here
+elif [[ "$NODE_ENV" == "production" ]]; then
+	adonis serve
+else
+	npm run serve:dev 
+fi

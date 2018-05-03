@@ -1,0 +1,41 @@
+version: '2'
+services:
+  app:
+    build:
+      context: ./docker/app
+      dockerfile: Dockerfile
+    environment:
+      CONTAINER_ENV: "${NODE_ENV}"
+      WWWUSER: "${WWWUSER}"
+    image: adonisd/app
+    ports:
+      - "${APP_PORT}:8080"
+    volumes:
+     - .:/var/www/html
+    networks:
+     - adonisd
+  mariadb:
+    image: mariadb:10.3
+    ports:
+     - "${DB_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USER}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+     - adonisdmariadb:/var/lib/mysql
+     # - ./docker/mysql/conf.d:/etc/mysql/conf.d
+     # - ./docker/mysql/logs:/var/log/mysql
+  redis:
+    image: redis:alpine
+    volumes:
+     - adonisdredis:/data
+    networks:
+     - adonisd
+networks:
+  adonisd:
+    driver: "bridge"
+volumes:
+  adonisdmariadb:
+    driver: "local"

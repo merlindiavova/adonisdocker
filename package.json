@@ -1,0 +1,21 @@
+{
+  "name": "adonisdocker",
+  "version": "1.0.0",
+  "description": "Helper to setup an AdonisJs Docker development environment",
+  "repository": "merlindiavova/adonisdocker",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "AdonisJS",
+    "adonisd",
+    "cli",
+    "docker"
+  ],
+  "author": "Merlin Diavova",
+  "license": "MIT",
+  "bin": {
+    "copyadonisd": "./index.js"
+  }
+}
