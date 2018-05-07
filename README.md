@@ -1,19 +1,19 @@
-# AdonisJs Docker Env
+# AdonisDocker
 
-A simple helper to setup an AdonisJs Docker devevelopment environment.
+A simple helper to setup an AdonisJs Docker development environment.
 
 ## Installation
 
 ```bash
-npm install -g adonisjs-docker-env
+npm install -g adonisdocker
 ```
 
-This will give you access to the global ```adonisdocker ``` script.
+This will give you access to the global ```copyadonisd ``` script.
 
 ## Usage
 
 ```bash
-cd /path/to/your/project
+cd /path/to/project
 
 copyadonisd
 ```
